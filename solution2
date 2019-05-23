@@ -1,0 +1,212 @@
+import java.util.ArrayList;
+import java.util.LinkedList;
+import java.util.PriorityQueue;
+
+
+class Solution{
+    public int solution(int[][] array){
+        Graph graph = new Graph(array);
+        return graph.dijkstra();
+
+    }
+}
+
+
+
+class Node implements Comparable<Node>{
+    int verticalArrayIndex;
+    int horizontalArrayIndex;
+    int value;
+    int cost = Integer.MAX_VALUE;
+    boolean visited =false;
+    int zeros;
+    int excessiveFives;
+    int excessiveTwos;
+    int excessiveFivesCost;
+    int excessiveTwosCost;
+
+    public Node(int verticalArrayIndex, int horizontalArrayIndex, int value) {
+        this.verticalArrayIndex = verticalArrayIndex;
+        this.horizontalArrayIndex = horizontalArrayIndex;
+        this.value = value;
+        if(verticalArrayIndex == 0 && horizontalArrayIndex == 1){
+            int x = 5;
+        }
+        calculateValue(value);
+    }
+
+    public boolean calculateCost(Node node){
+        if(this.visited){
+            return false;
+        }
+        if(zeros == -1 ){
+            if (node.cost>0){
+                this.cost = -1;
+                return true;
+            }
+        }
+        if(node.cost == -1){
+            if(this.cost>0) {
+                this.cost = -1;
+                return true;
+            }else {
+                return false;
+            }
+
+        }
+        int excessiveFivesCost =0;
+        int excessiveTwosCost = 0;
+        int cost = node.cost+zeros;
+
+        if(excessiveTwos!=0){
+            if(node.excessiveFivesCost<excessiveTwos){
+                cost += node.excessiveFivesCost;
+                excessiveTwosCost = excessiveTwos - node.excessiveFivesCost;
+            }else {
+                cost += excessiveTwos;
+                excessiveFivesCost = node.excessiveFivesCost - excessiveTwos;
+            }
+        }else if(excessiveFives !=0){
+            if(node.excessiveTwosCost<excessiveFives){
+                cost += node.excessiveTwosCost;
+                excessiveFivesCost = excessiveFives - node.excessiveTwosCost;
+            }else {
+                cost += excessiveFives;
+                excessiveTwosCost = node.excessiveTwosCost - excessiveFives;
+            }
+        }else {
+            excessiveFivesCost = node.excessiveFivesCost;
+            excessiveTwosCost = node.excessiveTwosCost;
+        }
+        if (cost<this.cost || (this.cost == -1 && cost ==0)) {
+            this.cost = cost;
+            this.excessiveFivesCost = excessiveFivesCost;
+            this.excessiveTwosCost = excessiveTwosCost;
+            return true;
+        }
+        if(cost == this.cost){
+            if(this.excessiveFivesCost+this.excessiveTwosCost>excessiveFivesCost+excessiveTwosCost){
+                this.excessiveTwosCost = excessiveTwosCost;
+                this.excessiveFivesCost = excessiveFivesCost;
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public void calculateValue(int value){
+        if(value == 0){
+            zeros = -1;
+            return;
+        }
+        while(value%5 == 0){
+            value = value/5;
+            excessiveFives++;
+        }
+        while(value%2 == 0) {
+            value = value / 2;
+            excessiveTwos++;
+        }
+        if(excessiveTwos>excessiveFives){
+            excessiveTwos -= excessiveFives;
+            zeros = excessiveFives;
+            excessiveFives = 0;
+        }else {
+            excessiveFives-= excessiveTwos;
+            zeros = excessiveTwos;
+            excessiveTwos= 0;
+        }
+    }
+
+    @Override
+    public int compareTo(Node o) {
+        if(this.cost == -1 && o.cost == 0){
+            return 1;
+        }
+        if(this.cost == 0 && o.cost == -1){
+            return -1;
+        }
+        if (this.cost>o.cost) return 1;
+        else if(this.cost==o.cost) {
+            if(o.excessiveFivesCost+o.excessiveTwosCost>excessiveFivesCost+excessiveTwosCost){
+                return -1;
+            }if(o.excessiveFivesCost+o.excessiveTwosCost<excessiveFivesCost+excessiveTwosCost) {
+                return 1;
+            }else return 0;
+        }
+        else return -1;
+    }
+}
+
+class Graph{
+    Node[][] array;
+    int verticalSize;
+    int horizontalSize;
+    PriorityQueue<Node> queue = new PriorityQueue<>();
+    boolean isZeroPresent = false;
+
+    public Graph( int[][] array) {
+        this.array = new Node[array.length][array.length];
+        for (int i = 0; i <array.length ; i++) {
+            for (int j = 0; j <array.length ; j++) {
+                this.array[i][j] = new Node(j,i,array[i][j]);
+                if (this.array[i][j].zeros == -1){
+                    isZeroPresent = true;
+                }
+            }
+        }
+        verticalSize = array.length;
+        horizontalSize = array[0].length;
+    }
+
+    public int dijkstra(){
+        Node root = null;
+        array[0][0].cost = array[0][0].zeros;
+        array[0][0].excessiveFivesCost = array[0][0].excessiveFives;
+        array[0][0].excessiveTwosCost= array[0][0].excessiveTwos;
+        checkNeighbours(0,0);
+        queue.add(array[0][0]);
+        while (!queue.isEmpty()){
+            root = queue.peek();
+            queue.remove(root);
+            if(root.horizontalArrayIndex == horizontalSize-1 && root.verticalArrayIndex == verticalSize-1){
+                break;
+            }
+            checkNeighbours(root.horizontalArrayIndex,root.verticalArrayIndex);
+        }
+        if(root.cost == -1){
+            return 1;
+        }
+        if(root.cost !=0 && isZeroPresent){
+            return 1;
+        }
+        return root.cost;
+    }
+
+    public void checkNeighbours(int horizontalIndex, int verticalIndex){
+        Node node = array[horizontalIndex][verticalIndex];
+        if(node.visited){
+            return;
+        }
+        if(horizontalIndex!=0){
+            if(array[horizontalIndex-1][verticalIndex].calculateCost(node)){
+                queue.add(array[horizontalIndex-1][verticalIndex]);
+            }
+        }
+        int x = 5;
+        if(horizontalIndex!=array.length-1){
+            if(array[horizontalIndex+1][verticalIndex].calculateCost(node)){
+                queue.add(array[horizontalIndex+1][verticalIndex]);
+            }
+        }if(verticalIndex!=0){
+            if(array[horizontalIndex][verticalIndex-1].calculateCost(node)){
+                queue.add(array[horizontalIndex][verticalIndex-1]);
+            }
+        }if(verticalIndex!=array[0].length-1){
+            if(array[horizontalIndex][verticalIndex+1].calculateCost(node)){
+                queue.add(array[horizontalIndex][verticalIndex+1]);
+            }
+        }
+        node.visited = true;
+    }
+}
